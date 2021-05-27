@@ -10,6 +10,9 @@ class Obstaculo
         String tipoObstaculo = "";
         Int carril = 0;
 
+        Int posX = 0;
+        Int posY = 0;
+
     public:
         Obstaculo() {}
         virtual ~Obstaculo() {}

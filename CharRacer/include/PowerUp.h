@@ -9,6 +9,9 @@ class PowerUp
         String tipoPoder = "";
         Int carril = 0;
 
+        Int posX = 0;
+        Int posy = 0;
+
     public:
         PowerUp() {}
         virtual ~PowerUp() {}

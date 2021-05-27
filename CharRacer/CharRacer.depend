@@ -1,0 +1,10 @@
+# depslib dependency file v1.0
+1622064710 source:/home/michael/github/Projecto_Final_Arqui/CharRacer/main.cpp
+	<iostream>
+	<stdlib.h>
+	<unistd.h>
+	<sys/ioctl.h>
+	<termios.h>
+	<stropts.h>
+	<stdio.h>
+

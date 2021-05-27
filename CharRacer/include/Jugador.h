@@ -11,6 +11,9 @@ class Jugador
         Int carril = 0;
         Int vidas = 0;
 
+        Int posX = 0;
+        Int posY = 0;
+
     public:
         Jugador() {}
         virtual ~Jugador() {}

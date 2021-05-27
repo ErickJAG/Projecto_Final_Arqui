@@ -8,6 +8,8 @@ class Moneda
     private:
         Int cantidad = 0;
         Int carril = 0;
+        Int posX = 0;
+        Int posY = 0;
 
     public:
         Moneda() {}
