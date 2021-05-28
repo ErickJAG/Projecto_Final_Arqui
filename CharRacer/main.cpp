@@ -40,7 +40,7 @@ int x,y;
 
 Jugador *jugador = new Jugador();
 
-ArrayList<Moneda> *listaMonedas = new ArrayList<Moneda>();
+ArrayList<Moneda*> *listaMonedas = new ArrayList<Moneda*>();
 
 
 //-------- Funcion para detectar las teclas ------
@@ -68,7 +68,7 @@ int _kbhit() {
 //------- Poner los valores iniciales del juego ----
 void inicializarTerreno(void){
     Moneda *moneda = new Moneda();
-    listaMonedas->append(*moneda);
+    listaMonedas->append(moneda);
 
     // Inicializar la matriz
     for(int i = 0; i < width; i++){
@@ -165,16 +165,17 @@ void imprimirMonedas(int frame){
             //*moneda = listaMonedas->getElement();
 
             //-------- Poner el objeto en su posición de la matriz.
-            background[listaMonedas->getElement().getPosX()][listaMonedas->getElement().getPosY()] = "©";
+            background[listaMonedas->getElement()->getPosX()][listaMonedas->getElement()->getPosY()] = "©";
 
             //-------- Aumentar una posición hacia abajo al objeto.
-            listaMonedas->getElement().setPosY(listaMonedas->getElement().getPosY() + 1);
+            listaMonedas->getElement()->setPosY(listaMonedas->getElement()->getPosY() + 1);
 
             //-------- Borrar el dibujo del objeto en la posición anterior.
-            background[listaMonedas->getElement().getPosX()][listaMonedas->getElement().getPosY() - 2] = " ";
+            background[listaMonedas->getElement()->getPosX()][listaMonedas->getElement()->getPosY() - 2] = " ";
 
             //-------- Eliminar al objeto cuando llega al final de la matriz.
-            if(listaMonedas->getElement().getPosY() >= 15){
+            if(listaMonedas->getElement()->getPosY() >= 14){
+                background[listaMonedas->getElement()->getPosX()][14] = " ";
                 listaMonedas->remove();
             }
         }
