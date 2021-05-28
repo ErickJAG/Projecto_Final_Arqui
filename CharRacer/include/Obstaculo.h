@@ -1,36 +1,39 @@
 #ifndef OBSTACULO_H
 #define OBSTACULO_H
 
+#include<string>
+
+using namespace std;
 
 class Obstaculo
 //--------------- Esta es la clase que simula el comportamiento de los obstaculos.
 {
 
     private:
-        String tipoObstaculo = "";
-        Int carril = 0;
+        string tipoObstaculo = "";
+        int carril = 0;
 
-        Int posX = 0;
-        Int posY = 0;
+        int posX = 0;
+        int posY = 0;
 
     public:
         Obstaculo() {}
         virtual ~Obstaculo() {}
 
         //--------------- getters y setters -------
-        String getTipoObstaculo(){
+        string getTipoObstaculo(){
             return tipoObstaculo;
         }
 
-        void setTipoObstaculo(tipoObstaculo = nuevoTipo){
+        void setTipoObstaculo(string nuevoTipo){
             tipoObstaculo = nuevoTipo;
         }
 
-        Int getCarril(){
+        int getCarril(){
             return carril;
         }
 
-        void setCarril(Int nuevoCarril){
+        void setCarril(int nuevoCarril){
             carril = nuevoCarril;
         }
 

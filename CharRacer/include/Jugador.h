@@ -1,55 +1,90 @@
 #ifndef JUGADOR_H
 #define JUGADOR_H
+#include <string>
 
+using namespace std;
 
 class Jugador
 //-------- Esta es la clase que simula el comportamiento del jugador del juego.
 {
     private:
-        String nickname = "";
-        Int puntuacion = 0;
-        Int carril = 0;
-        Int vidas = 0;
+        string nickname = " ";
+        int puntuacion = 0;
+        int carril = 0;
+        int vidas = 0;
+        string estado = " ";
 
-        Int posX = 0;
-        Int posY = 0;
+        int posX = 6;
+        int posY = 11;
 
     public:
-        Jugador() {}
+        Jugador() {
+            nickname = " ";
+            puntuacion = 0;
+            carril = 0;
+            vidas = 0;
+            estado = " ";
+
+            posX = 6;
+            posY = 11;
+        }
+
         virtual ~Jugador() {}
 
         //-------- getters y setters ----------
-        String getNickname(){
+        string getNickname(){
             return nickname;
         }
 
-        void setNickname(String nuevoNick){
+        void setNickname(string nuevoNick){
             nickname = nuevoNick;
         }
 
-        Int getPuntuacion(){
+        int getPuntuacion(){
             return puntuacion;
         }
 
-        void setPuntuacion(Int nuevaPuntuacion){
+        void setPuntuacion(int nuevaPuntuacion){
             puntuacion = nuevaPuntuacion;
         }
 
-        Int getCarril(){
+        int getCarril(){
             return carril;
         }
 
-        void setCarril(Int nuevoCarril){
+        void setCarril(int nuevoCarril){
             carril = nuevoCarril;
         }
 
-        Int getVidas(){
+        int getVidas(){
             return vidas;
         }
 
-        void setVidas(Int nuevasVidas){
+        void setVidas(int nuevasVidas){
             vidas = nuevasVidas;
         }
+
+        int getPosX(){
+            return posX;
+        }
+
+        void setPosX(int x){
+            posX = x;
+        }
+
+        int getPosY(){
+            return posY;
+        }
+
+        void setEstado(string nuevoEstado){
+            estado = nuevoEstado;
+        }
+
+        string getEstado(){
+            return estado;
+        }
+
+
 
 };
 

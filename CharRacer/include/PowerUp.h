@@ -1,35 +1,38 @@
 #ifndef POWERUP_H
 #define POWERUP_H
 
+#include <string>
+
+using namespace std;
 
 class PowerUp
 //---------------- Esta es la clase que simula el comportamiento de los power ups.
 {
     private:
-        String tipoPoder = "";
-        Int carril = 0;
+        string tipoPoder = "";
+        int carril = 0;
 
-        Int posX = 0;
-        Int posy = 0;
+        int posX = 0;
+        int posy = 0;
 
     public:
         PowerUp() {}
         virtual ~PowerUp() {}
 
         //--------------- getters y setters ---------
-        String getTipoPoder(){
+        string getTipoPoder(){
             return tipoPoder;
         }
 
-        void setTipoPoder(String nuevoPoder){
+        void setTipoPoder(string nuevoPoder){
             tipoPoder = nuevoPoder;
         }
 
-        Int getCarril(){
+        int getCarril(){
             return carril;
         }
 
-        void setCarril(Int nuevoCarril){
+        void setCarril(int nuevoCarril){
             carril = nuevoCarril;
         }
 

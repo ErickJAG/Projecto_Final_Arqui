@@ -7,77 +7,43 @@
 #include <stropts.h>
 #endif
 
+#include <string>
 #include <stdio.h>
+#include <Jugador.h>
+#include <Moneda.h>
+#include <Obstaculo.h>
+#include <PowerUp.h>
+#include <arraylist.h>
 
 using namespace std;
 
 
-/*
-__author__ = suraj singh bisht
-__email__  = surajsinghbisht054@gmail.com
-__Github__ = https://github.com/surajsinghbisht054
+//-------------- Declaración de variables importantes -----------
 
-*/
-
-
-///++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-///                       Testing Configuration
-///++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-///
-/// Operating System            :   Linux 4.4.0-109-generic #132-Ubuntu, x86_64 GNU/Linux
-/// Editor   : Code::Blocks 13.12
-/// Compiler          : g++ (Ubuntu 5.4.0-6ubuntu1~16.04.5) 5.4.0 20160609
-/// Blog    : www.bitforestinfo.com
-///
-///++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+const int width = 40;                      // El largo
+const int height= 15;                      // El ancho
+const char* clearcommand = "clear";        // Comando para limpiar la pantalla
 
 
-/// ++++++++++++++++++++ [ Configuration Panel] +++++++++++++++++++++++++++++++++{
+string background[width][height];   //--- Matriz del juego
 
-/// Global Dimension
-const int width = 40;                      // Boundary Width
-const int height= 15;                      // Boundary Height
-const char block='#';                      // Block Char
-const char* clearcommand = "clear";        // Teminal Command (Linux: clear | Windows : clr )
+int score = 0;                      //--- Puntuacion
+int lives = 3;                      //--- Vidas
+int speed = 1;                      //--- Velocidad
 
+int lap = 100;                      //--- lapso entre frames
 
-/// global arrays for Data Records
-string background[width][height];   /// Background Array
-int snake[50][2];               /// Maximum Snake Length
-int food[2]={0,0};              /// Snake Food Array
-int score = 0;                  /// Score
-int snakelen = 3;               /// Snake Starting Length
-int snakemovementspeedx = 1;    /// Horizontal Speed
-int snakemovementspeedy = 1;    /// Vertical Speed
-int lap = 100;                    /// Waiting Time Betweeen Frames
-
-/// ++++++++++++++++++++ [ Configuration Panel] END +++++++++++++++++++++++++++++++++}
-
-
-
-
-/// Declearing Global Temporary Variable To Save Memory
 int bytesWaiting, i;
-int px,py,nx, ny;
 char k;
 int h,w;
 int x,y;
-int movementx=snakemovementspeedx;                /// Snake Movement
-int movementy=0;                /// Snake Movement
+
+Jugador *jugador = new Jugador();
+
+ArrayList<Moneda> *listaMonedas = new ArrayList<Moneda>();
 
 
-/*
-Reference Links:
-        https://www.quora.com/With-which-function-can-I-replace-kbhit-in-C++-because-the-header-conio-h-doesnt-exist-in-linux
-
-Ubuntu Users:
-    sudo apt-get install libncurses5-dev libncursesw5-dev
-*/
-
-
-///
-/// http://www.flipcode.com/archives/_kbhit_for_Linux.shtml
-/// Check KeyBoard Pressed Or Not
+//-------- Funcion para detectar las teclas ------
 int _kbhit() {
     static const int STDIN = 0;
     static bool initialized = false;
@@ -94,14 +60,16 @@ int _kbhit() {
 
     //int bytesWaiting;
     ioctl(STDIN, FIONREAD, &bytesWaiting);
+
     return bytesWaiting;
 }
 
 
-
-
-/// Initialise background borders Onto Array
+//------- Poner los valores iniciales del juego ----
 void inicializarTerreno(void){
+    Moneda *moneda = new Moneda();
+    listaMonedas->append(*moneda);
+
     // Inicializar la matriz
     for(int i = 0; i < width; i++){
         for(int j = 0; j < height; j++){
@@ -117,6 +85,7 @@ void inicializarTerreno(void){
         background[15][i] = "║";
 
     }
+
 
     // Inicializar el texto de la derecha
         background[18][0] = "S";
@@ -147,9 +116,12 @@ void inicializarTerreno(void){
 
 
 
-
-/// Print Array Frame
+//------- Imprimir la matriz --------
 void imprimirMatriz(void){
+
+    background[18][1] = to_string(score);
+    background[18][4] = to_string(lives);
+    background[18][7] = to_string(speed);
 
     for(h = 0; h < height; h++){
 
@@ -169,18 +141,61 @@ void imprimirMatriz(void){
 }
 
 
-/// Clear Background
-void clear_background(void){
+//------- Dibujar al jugador --------
+void imprimirJugador(){
+    // Asignar los valores del auto del jugador
+        // -------- Llantas ---------
+        background[jugador->getPosX()][jugador->getPosY()]        = "ʘ";
+        background[jugador->getPosX() + 3][jugador->getPosY()]    = "ʘ";
+        background[jugador->getPosX()][jugador->getPosY() + 3]    = "ʘ";
+        background[jugador->getPosX() +3][jugador->getPosY() + 3] = "ʘ";
+
+        background[jugador->getPosX() + 1][jugador->getPosY() + 1] = "֍";
+        background[jugador->getPosX() + 2][jugador->getPosY() + 1] = "֍";
+        background[jugador->getPosX() + 1][jugador->getPosY() + 2] = "֍";
+        background[jugador->getPosX() + 2][jugador->getPosY() + 2] = "֍";
+}
+
+//------- imprimir las monedas -------
+void imprimirMonedas(int frame){
+
+    if(frame % 4 >= 0){
+        for(listaMonedas->gotoStart(); !listaMonedas->atEnd(); listaMonedas->next()){
+
+            //*moneda = listaMonedas->getElement();
+
+            //-------- Poner el objeto en su posición de la matriz.
+            background[listaMonedas->getElement().getPosX()][listaMonedas->getElement().getPosY()] = "©";
+
+            //-------- Aumentar una posición hacia abajo al objeto.
+            listaMonedas->getElement().setPosY(listaMonedas->getElement().getPosY() + 1);
+
+            //-------- Borrar el dibujo del objeto en la posición anterior.
+            background[listaMonedas->getElement().getPosX()][listaMonedas->getElement().getPosY() - 2] = " ";
+
+            //-------- Eliminar al objeto cuando llega al final de la matriz.
+            if(listaMonedas->getElement().getPosY() >= 15){
+                listaMonedas->remove();
+            }
+        }
+    }
+
+}
+
+
+//------- Limpiar la pantalla -------
+void limpiarPantalla(){
     system(clearcommand);
 }
 
 
-/// Update loop
-void mainloop(void){
+//------- Actualizar el loop --------
+void mainloop(int frame){
 
-    clear_background();          // clear background
-    imprimirMatriz();         // Print Frame
-
+    limpiarPantalla();           // limpiar pantalla
+    imprimirMatriz();            // imprimir los elementos de la interfaz de la matriz
+    imprimirJugador();           // imprimir al auto del jugador
+    imprimirMonedas(frame);      // imprimir monedas
 }
 
 
@@ -199,27 +214,36 @@ void sleepcp(int milliseconds) // Cross-platform sleep function
 /// Reaction On Press Button Of Keyboard
 void reaction_on_keyboard(const char k){
     if(k=='d'||k=='6'){
-        // Right Turn
-        movementx = snakemovementspeedx;
-        movementy = 0;
+        if(jugador->getPosX() != 11){
+        //---------- limpiar posición anterior
+            background[jugador->getPosX()][jugador->getPosY()]        = " ";
+            background[jugador->getPosX() + 3][jugador->getPosY()]    = " ";
+            background[jugador->getPosX()][jugador->getPosY() + 3]    = " ";
+            background[jugador->getPosX() +3][jugador->getPosY() + 3] = " ";
 
+            background[jugador->getPosX() + 1][jugador->getPosY() + 1] = " ";
+            background[jugador->getPosX() + 2][jugador->getPosY() + 1] = " ";
+            background[jugador->getPosX() + 1][jugador->getPosY() + 2] = " ";
+            background[jugador->getPosX() + 2][jugador->getPosY() + 2] = " ";
+
+            jugador->setPosX(jugador->getPosX() + 5);
+        }
 
     }else if(k=='a'||k=='4'){
-        // Left Turn
-        movementx = -snakemovementspeedx;
-        movementy = 0;
+                //---------- limpiar posición anterior
+        if(jugador->getPosX() != 1){
+            background[jugador->getPosX()][jugador->getPosY()]        = " ";
+            background[jugador->getPosX() + 3][jugador->getPosY()]    = " ";
+            background[jugador->getPosX()][jugador->getPosY() + 3]    = " ";
+            background[jugador->getPosX() +3][jugador->getPosY() + 3] = " ";
 
-    }else if(k=='w'||k=='8'){
+            background[jugador->getPosX() + 1][jugador->getPosY() + 1] = " ";
+            background[jugador->getPosX() + 2][jugador->getPosY() + 1] = " ";
+            background[jugador->getPosX() + 1][jugador->getPosY() + 2] = " ";
+            background[jugador->getPosX() + 2][jugador->getPosY() + 2] = " ";
 
-        // Turn UP
-        movementx = 0;
-        movementy = -snakemovementspeedy;
-
-    }else if(k=='s'||k=='2'){
-        // Turn Down
-        movementx = 0;
-        movementy = snakemovementspeedy;
-
+            jugador->setPosX(jugador->getPosX() - 5);
+        }
 
     }else if(k=='q'||k=='z'||k=='c'){
         cout << "[+] Exit Safely [+]"<<endl;
@@ -230,12 +254,10 @@ void reaction_on_keyboard(const char k){
 
 
 /// Loop
-void loop(void){
-    int frame=0;
-    x=0;
-    y=0;
+void loop(){
+    int frame = 0;
 
-    while(x<500){
+    while(true){
         sleepcp(lap);
 
         if(_kbhit())   /// If keyboard hit
@@ -244,7 +266,7 @@ void loop(void){
             reaction_on_keyboard(k);
         }
 
-        mainloop();                 /// RUn Main Loop FUnction
+        mainloop(frame);                 /// RUn Main Loop FUnction
 
         cout << "< Frame : " << frame << "  | Score  : " << score << " > "<< endl; /// Print Status
         frame++;

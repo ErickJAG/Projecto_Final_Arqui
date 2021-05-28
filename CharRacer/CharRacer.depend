@@ -1,10 +1,33 @@
 # depslib dependency file v1.0
-1622064710 source:/home/michael/github/Projecto_Final_Arqui/CharRacer/main.cpp
+1622167477 source:/home/michael/github/Projecto_Final_Arqui/CharRacer/main.cpp
 	<iostream>
 	<stdlib.h>
 	<unistd.h>
 	<sys/ioctl.h>
 	<termios.h>
 	<stropts.h>
+	<string>
 	<stdio.h>
+	<Jugador.h>
+	<Moneda.h>
+	<Obstaculo.h>
+	<PowerUp.h>
+	<arraylist.h>
+
+1622164389 /home/michael/github/Projecto_Final_Arqui/CharRacer/include/Jugador.h
+	<string>
+
+1622167500 /home/michael/github/Projecto_Final_Arqui/CharRacer/include/Moneda.h
+
+1622161948 /home/michael/github/Projecto_Final_Arqui/CharRacer/include/Obstaculo.h
+	<string>
+
+1622161983 /home/michael/github/Projecto_Final_Arqui/CharRacer/include/PowerUp.h
+	<string>
+
+1622165007 /home/michael/github/Projecto_Final_Arqui/CharRacer/include/arraylist.h
+	"list.h"
+	<stdexcept>
+
+1622165009 /home/michael/github/Projecto_Final_Arqui/CharRacer/include/list.h
 
