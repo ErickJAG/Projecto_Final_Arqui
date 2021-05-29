@@ -13,10 +13,21 @@ class Moneda
 
     public:
         Moneda() {
+            srand (time(NULL));
             cantidad = 0;
-            carril = 0;
-            posX = 7;
-            posY = 2;
+            carril = rand() % 3 + 1;
+
+            if(carril == 1){
+                posX = 1;
+            }
+            else if(carril == 2){
+                posX = 6;
+            }
+            else if(carril == 3){
+                posX = 11;
+            }
+
+            posY = 0;
         }
         virtual ~Moneda() {}
 
