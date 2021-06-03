@@ -1,3 +1,10 @@
+#include <ncurses.h>
+#include <curses.h>
+
+using namespace std;
+
+#include <unistd.h>  /* only for sleep() */
+
 #include <iostream>
 #include <stdlib.h>
 #include <unistd.h>
@@ -8,22 +15,23 @@
 #include <stropts.h>
 #endif
 
+
+#include <locale.h>
 #include <string>
 #include <stdio.h>
-#include <Jugador.h>
-#include <Moneda.h>
-#include <Obstaculo.h>
-#include <PowerUp.h>
-#include <arraylist.h>
+#include "/home/michael/Documentos/Carpeta de proyectos en c++/prueba2/include/Jugador.h"
+#include "/home/michael/Documentos/Carpeta de proyectos en c++/prueba2/include/Moneda.h"
+#include "/home/michael/Documentos/Carpeta de proyectos en c++/prueba2/include/Obstaculo.h"
+#include "/home/michael/Documentos/Carpeta de proyectos en c++/prueba2/include/PowerUp.h"
+#include "/home/michael/Documentos/Carpeta de proyectos en c++/prueba2/include/arraylist.h"
 
 using namespace std;
 
 
 //-------------- Declaración de variables importantes -----------
 
-const int width = 40;                      // El largo
-const int height= 17;                      // El ancho
-const char* clearcommand = "clear";        // Comando para limpiar la pantalla
+const int width  = 40;                      // El largo
+const int height = 26;                      // El ancho
 
 
 string background[width][height];   //--- Matriz del juego
@@ -38,40 +46,27 @@ int lap = 100;                      //--- lapso entre frames
 int bytesWaiting, i;
 char k;
 
+bool escuadoActivado = false;
+bool imanActivado = false;
+int turnosIman = 4;
+int colorCode = 3;
+
+
+//-------------- booleans para condicionales ---------
+bool seguirJugando = true;
+bool juegoPausado = false;
+bool juegoPerdido = false;
+
 Jugador *jugador = new Jugador();
 
 ArrayList<Moneda*> *listaMonedas = new ArrayList<Moneda*>();
 ArrayList<Obstaculo*> *listaObstaculos = new ArrayList<Obstaculo*>();
 ArrayList<PowerUp*> *listaPowerUps = new ArrayList<PowerUp*>();
 
-
-//-------- Funcion para detectar las teclas ------
-int _kbhit() {
-    static const int STDIN = 0;
-    static bool initialized = false;
-
-    if (! initialized) {
-        // Use termios to turn off line buffering
-        termios term;
-        tcgetattr(STDIN, &term);
-        term.c_lflag &= ~ICANON;
-        tcsetattr(STDIN, TCSANOW, &term);
-        setbuf(stdin, NULL);
-        initialized = true;
-    }
-
-    //int bytesWaiting;
-    ioctl(STDIN, FIONREAD, &bytesWaiting);
-
-    return bytesWaiting;
-}
-
-
 //------- Poner los valores iniciales del juego ----
 void inicializarTerreno(void){
     /* initialize random seed: */
     srand (time(NULL));
-
 
     // Inicializar la matriz
     for(int i = 0; i < width; i++){
@@ -115,16 +110,31 @@ void inicializarTerreno(void){
         background[21][9] = "E";
         background[22][9] = "R";
         background[23][9] = "S";
+
 }
 
 
-
 //------- Imprimir la matriz --------
-void imprimirMatriz(void){
+void imprimirMatriz(WINDOW *pantallaJuego){
 
     background[18][1] = to_string(score);
     background[18][4] = to_string(lives);
     background[18][7] = to_string(speed);
+
+    if(escuadoActivado){
+        background[18][10] = "∩";
+    }
+    else{
+        background[18][10] = " ";   
+    }
+
+
+    if(imanActivado){
+        background[19][10] = "Ω";
+    }
+    else{
+        background[19][10] = " ";
+    }
 
     for(int h = 0; h < height; h++){
 
@@ -132,15 +142,44 @@ void imprimirMatriz(void){
             string caracter = "";
             caracter = background[w][h];
 
-            cout << caracter;
+            if(caracter == "©"){
+                colorCode = 3; // verde
+            }
+
+            else if(caracter == "∩" or caracter == "Ω"){
+                colorCode = 4; // azul
+            }
+
+            else if(caracter == "/" or caracter == "\\"){
+                colorCode = 1; // rojo
+            }
+
+            else if(caracter == "|" or caracter == "╔" or caracter == "╗" or caracter == "▄"){
+                colorCode = 1; // rojo
+            }   
+
+            else if(caracter == "=" or caracter == "≤" or caracter == "≥"){
+                colorCode = 1; // rojo
+            }
+
+            else{
+                colorCode = 7; // blanco
+            }
+
+
+            attron(COLOR_PAIR(colorCode));
+            mvprintw(h, w, caracter.c_str());
+            //wattroff(pantallaJuego, COLOR_PAIR(1));
 
         }
-        cout << endl;
-
 
     }
 
+    mvprintw(1, 18, to_string(score).c_str());
 
+
+    //refresh();
+    refresh();
 }
 
 
@@ -149,20 +188,20 @@ void generarObjeto(int frame){
 
     if(frame % frecuencia == 0){
         /* generate secret number between 1 and 10: */
-        int opcion1 = rand() % 3 + 1;
+        int opcion1 = rand() % 10 + 1;
         //---- Si es opcion 1 entonces es una moneda
 
-        if(opcion1 == 1){
+        if(opcion1 >= 1 and opcion1 <= 3){
             Moneda *moneda = new Moneda();
             listaMonedas->append(moneda);
         }
 
         //---- Si es opcion 2 entonces es un obstaculo
-        else if(opcion1 == 2){
+        else if(opcion1 >= 4 and opcion1 <= 8){
             Obstaculo *obstaculo = new Obstaculo();
             listaObstaculos->append(obstaculo);
 
-            int opcion2 = rand() % 1 + 1;
+            int opcion2 = rand() % 3 + 1;
 
             //------ Rotulo Alto -----
             if(opcion2 == 1){
@@ -179,7 +218,7 @@ void generarObjeto(int frame){
         }
 
         //---- Si es opcion 3 entonces es un powerUp
-        else if(opcion1 == 3){
+        else if(opcion1 >= 9){
             PowerUp *powerUp = new PowerUp();
 
             int opcion2 = rand() % 2 + 1;
@@ -206,10 +245,10 @@ void imprimirJugador(){
     // Asignar los valores del auto del jugador
         // -------- Llantas ---------
         if(jugador->getEstado() == "normal"){
-            background[jugador->getPosX()][jugador->getPosY()]        = "ʘ";
-            background[jugador->getPosX() + 3][jugador->getPosY()]    = "ʘ";
-            background[jugador->getPosX()][jugador->getPosY() + 3]    = "ʘ";
-            background[jugador->getPosX() +3][jugador->getPosY() + 3] = "ʘ";
+            background[jugador->getPosX()][jugador->getPosY()]        = "֍";
+            background[jugador->getPosX() + 3][jugador->getPosY()]    = "֍";
+            background[jugador->getPosX()][jugador->getPosY() + 3]    = "֍";
+            background[jugador->getPosX() +3][jugador->getPosY() + 3] = "֍";
 
 
             background[jugador->getPosX()][jugador->getPosY() + 4]    = " ";
@@ -218,36 +257,39 @@ void imprimirJugador(){
             background[jugador->getPosX() + 3][jugador->getPosY() + 1] = " ";
 
 
-            background[jugador->getPosX() + 1][jugador->getPosY() + 1] = "֍";
-            background[jugador->getPosX() + 2][jugador->getPosY() + 1] = "֍";
-            background[jugador->getPosX() + 1][jugador->getPosY() + 2] = "֍";
-            background[jugador->getPosX() + 2][jugador->getPosY() + 2] = "֍";
+            background[jugador->getPosX() + 1][jugador->getPosY() + 1] = "ʘ";
+            background[jugador->getPosX() + 2][jugador->getPosY() + 1] = "ʘ";
+            background[jugador->getPosX() + 1][jugador->getPosY() + 2] = "ʘ";
+            background[jugador->getPosX() + 2][jugador->getPosY() + 2] = "ʘ";
 
 
         }
         else if(jugador->getEstado() == "agacharse"){
             background[jugador->getPosX()][jugador->getPosY()]        = " ";
-            background[jugador->getPosX() + 3][jugador->getPosY()]    = " ";
             background[jugador->getPosX()][jugador->getPosY() + 3]    = " ";
+            background[jugador->getPosX() + 3][jugador->getPosY()]    = " ";
             background[jugador->getPosX() +3][jugador->getPosY() + 3] = " ";
 
-            background[jugador->getPosX() + 1][jugador->getPosY() + 1] = "֍";
-            background[jugador->getPosX() + 2][jugador->getPosY() + 1] = "֍";
-            background[jugador->getPosX() + 1][jugador->getPosY() + 2] = "֍";
-            background[jugador->getPosX() + 2][jugador->getPosY() + 2] = "֍";
+            background[jugador->getPosX() + 1][jugador->getPosY() + 1] = "ʘ";
+            background[jugador->getPosX() + 2][jugador->getPosY() + 1] = "ʘ";
+            background[jugador->getPosX() + 1][jugador->getPosY() + 2] = "ʘ";
+            background[jugador->getPosX() + 2][jugador->getPosY() + 2] = "ʘ";
+
+            background[jugador->getPosX()][jugador->getPosY() + 4] = " ";
+            background[jugador->getPosX() + 3][jugador->getPosY() + 4] = " ";
         }
         else if(jugador->getEstado() == "salto"){
-            background[jugador->getPosX()][jugador->getPosY()]         = "ʘ";
-            background[jugador->getPosX() + 3][jugador->getPosY()]     = "ʘ";
+            background[jugador->getPosX()][jugador->getPosY()]         = "֍";
+            background[jugador->getPosX() + 3][jugador->getPosY()]     = "֍";
 
 
-            background[jugador->getPosX()][jugador->getPosY() + 3]    = "ʘ";
-            background[jugador->getPosX() +3][jugador->getPosY() + 3] = "ʘ";
-            background[jugador->getPosX()][jugador->getPosY() + 4]    = "ʘ";
-            background[jugador->getPosX() +3][jugador->getPosY() + 4] = "ʘ";
+            background[jugador->getPosX()][jugador->getPosY() + 3]    = "֍";
+            background[jugador->getPosX() +3][jugador->getPosY() + 3] = "֍";
+            background[jugador->getPosX()][jugador->getPosY() + 4]    = "֍";
+            background[jugador->getPosX() +3][jugador->getPosY() + 4] = "֍";
 
-            background[jugador->getPosX() + 1][jugador->getPosY() + 2] = "֍";
-            background[jugador->getPosX() + 2][jugador->getPosY() + 2] = "֍";
+            background[jugador->getPosX() + 1][jugador->getPosY() + 2] = "ʘ";
+            background[jugador->getPosX() + 2][jugador->getPosY() + 2] = "ʘ";
         }
 }
 
@@ -269,8 +311,47 @@ void imprimirMonedas(int frame){
             //-------- Borrar el dibujo del objeto en la posición anterior.
             background[moneda->getPosX()][moneda->getPosY() - 2] = " ";
 
+
+            if(imanActivado){
+                if(moneda->getPosY() == jugador->getPosY()){
+                    background[moneda->getPosX()][moneda->getPosY() - 1] = " ";
+                    background[moneda->getPosX()][moneda->getPosY()] = " ";
+                    listaMonedas->remove();
+                    score += 1;
+                    turnosIman -= 1;
+
+                    system("play coin1.wav >>/dev/null 2>>/dev/null");
+
+                    if(score % 10 == 0){
+                        speed += 1;
+                        lap -= 4;
+                    }
+
+                    if(turnosIman <= 0){
+                        imanActivado = false;
+                    }
+                }
+            }
+
+            else{
+                if(moneda->getPosY() == jugador->getPosY() and moneda->getPosX() == jugador->getPosX()){
+                    background[moneda->getPosX()][moneda->getPosY() - 1] = " ";
+                    background[moneda->getPosX()][moneda->getPosY()] = " ";
+                    listaMonedas->remove();
+                    score += 1;
+
+                    system("play coin1.wav >>/dev/null 2>>/dev/null");
+
+                    if(score % 10 == 0){
+                        speed += 1;
+                        lap -= 4;
+                    }
+                }
+            }
+
+
             //-------- Eliminar al objeto cuando llega al final de la matriz.
-            if(moneda->getPosY() == 14){
+            if(moneda->getPosY() == height - 1){
                 background[moneda->getPosX()][moneda->getPosY() - 1] = " ";
                 background[moneda->getPosX()][moneda->getPosY()] = " ";
                 listaMonedas->remove();
@@ -295,8 +376,8 @@ void imprimirObstaculos(int frame){
                 background[obstaculo->getPosX() + 1][obstaculo->getPosY()] = "▄";
                 background[obstaculo->getPosX() + 2][obstaculo->getPosY()] = "▄";
                 background[obstaculo->getPosX() + 3][obstaculo->getPosY()] = "╗";
-                background[obstaculo->getPosX()][obstaculo->getPosY() + 1] = "║";
-                background[obstaculo->getPosX() + 3][obstaculo->getPosY() + 1] = "║";
+                background[obstaculo->getPosX()][obstaculo->getPosY() + 1] = "|";
+                background[obstaculo->getPosX() + 3][obstaculo->getPosY() + 1] = "|";
 
             }
             else if(obstaculo->getTipoObstaculo() == "barricada"){
@@ -317,24 +398,34 @@ void imprimirObstaculos(int frame){
             obstaculo->setPosY(obstaculo->getPosY() + 1);
 
             //-------- Borrar el dibujo del objeto en la posición anterior.
-            if(obstaculo->getTipoObstaculo() == "barricada" || obstaculo->getTipoObstaculo() == "pared"){
+            if(obstaculo->getTipoObstaculo() == "pared"){
                 background[obstaculo->getPosX()][obstaculo->getPosY() - 2] = " ";
                 background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 2] = " ";
                 background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 2] = " ";
                 background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 2] = " ";
-            }
-            else if(obstaculo->getTipoObstaculo() == "rotuloAlto"){
-                background[obstaculo->getPosX()][obstaculo->getPosY() - 2] = " ";
-                background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 2] = " ";
-                background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 2] = " ";
-                background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 2] = " ";
-                background[obstaculo->getPosX()][obstaculo->getPosY() - 1] = " ";
-                background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 1] = " ";
-            }
-            //-------- Eliminar al objeto cuando llega al final de la matriz.
-            if(obstaculo->getPosY() == 14){
+           
 
-                if(obstaculo->getTipoObstaculo() == "barricada" || obstaculo->getTipoObstaculo() == "pared"){
+                //------------- choque escudo --------------
+                if(escuadoActivado){
+                    if(obstaculo->getPosY() == jugador->getPosY() - 1 and obstaculo->getPosX() == jugador->getPosX()){
+                        background[obstaculo->getPosX()][obstaculo->getPosY() - 1] = " ";
+                        background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 1] = " ";
+                        background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 1] = " ";
+                        background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 1] = " ";
+                        background[obstaculo->getPosX()][obstaculo->getPosY()] = " ";
+                        background[obstaculo->getPosX() + 1][obstaculo->getPosY()] = " ";
+                        background[obstaculo->getPosX() + 2][obstaculo->getPosY()] = " ";
+                        background[obstaculo->getPosX() + 3][obstaculo->getPosY()] = " ";
+           
+                        listaObstaculos->remove();
+
+                        escuadoActivado = false;
+
+                        system("play crashSound.wav >>/dev/null 2>>/dev/null");
+                    }
+                }
+                //------------- choque normal --------------
+                if(obstaculo->getPosY() == jugador->getPosY() and obstaculo->getPosX() == jugador->getPosX()){
                     background[obstaculo->getPosX()][obstaculo->getPosY() - 1] = " ";
                     background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 1] = " ";
                     background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 1] = " ";
@@ -343,9 +434,166 @@ void imprimirObstaculos(int frame){
                     background[obstaculo->getPosX() + 1][obstaculo->getPosY()] = " ";
                     background[obstaculo->getPosX() + 2][obstaculo->getPosY()] = " ";
                     background[obstaculo->getPosX() + 3][obstaculo->getPosY()] = " ";
+           
+                    lives -= 1;
+                    listaObstaculos->remove();
+
+                    system("play Crash.wav >>/dev/null 2>>/dev/null");
+
+                    if(lives <= 0){
+                        background[18][4] = "0";
+                        juegoPerdido = true;
+                    }
                 }
             }
-            else if(obstaculo->getPosY() == 13){
+            else if(obstaculo->getTipoObstaculo() == "barricada"){
+                background[obstaculo->getPosX()][obstaculo->getPosY() - 2] = " ";
+                background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 2] = " ";
+                background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 2] = " ";
+                background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 2] = " ";
+           
+                if(jugador->getEstado() != "salto"){
+
+
+                    //--------- choque escudo ---------------
+                    if(escuadoActivado){
+                        if(obstaculo->getPosY() == jugador->getPosY() - 1 and obstaculo->getPosX() == jugador->getPosX()){
+                            background[obstaculo->getPosX()][obstaculo->getPosY() - 1] = " ";
+                            background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 1] = " ";
+                            background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 1] = " ";
+                            background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 1] = " ";
+                            background[obstaculo->getPosX()][obstaculo->getPosY()] = " ";
+                            background[obstaculo->getPosX() + 1][obstaculo->getPosY()] = " ";
+                            background[obstaculo->getPosX() + 2][obstaculo->getPosY()] = " ";
+                            background[obstaculo->getPosX() + 3][obstaculo->getPosY()] = " ";
+
+                            listaObstaculos->remove();
+
+                            escuadoActivado = false;
+
+                            system("play crashSound.wav >>/dev/null 2>>/dev/null");
+                        }
+                    }
+
+                    //--------- choque normal ---------------
+                    if(obstaculo->getPosY() == jugador->getPosY() and obstaculo->getPosX() == jugador->getPosX()){
+                        background[obstaculo->getPosX()][obstaculo->getPosY() - 1] = " ";
+                        background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 1] = " ";
+                        background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 1] = " ";
+                        background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 1] = " ";
+                        background[obstaculo->getPosX()][obstaculo->getPosY()] = " ";
+                        background[obstaculo->getPosX() + 1][obstaculo->getPosY()] = " ";
+                        background[obstaculo->getPosX() + 2][obstaculo->getPosY()] = " ";
+                        background[obstaculo->getPosX() + 3][obstaculo->getPosY()] = " ";
+
+                        lives -= 1;
+                        listaObstaculos->remove();
+
+                        system("play Crash.wav >>/dev/null 2>>/dev/null");
+
+                        if(lives <= 0){
+                            background[18][4] = "0";
+                            juegoPerdido = true;
+                        }
+                    }
+                }
+            }
+            else if(obstaculo->getTipoObstaculo() == "rotuloAlto"){
+                background[obstaculo->getPosX()][obstaculo->getPosY() - 2] = " ";
+                background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 2] = " ";
+                background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 2] = " ";
+                background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 2] = " ";
+                background[obstaculo->getPosX()][obstaculo->getPosY() - 1] = " ";
+                background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 1] = " ";
+
+                if(jugador->getEstado() != "agacharse"){
+
+
+                    //---------- choque escudo ------------
+                    if(escuadoActivado){
+                        if(jugador->getPosX() - 1 == obstaculo->getPosX() and jugador->getPosY() <= obstaculo->getPosY() + 2 and jugador->getPosY() >= obstaculo->getPosY()){
+                            background[obstaculo->getPosX()][obstaculo->getPosY() - 2] = " ";
+                            background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 2] = " ";
+                            background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 2] = " ";
+                            background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 2] = " ";
+                            background[obstaculo->getPosX()][obstaculo->getPosY() - 1] = " ";
+                            background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 1] = " ";
+
+                            background[obstaculo->getPosX()][obstaculo->getPosY() - 1] = " ";
+                            background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 1] = " ";
+                            background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 1] = " ";
+                            background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 1] = " ";
+                            background[obstaculo->getPosX()][obstaculo->getPosY()] = " ";
+                            background[obstaculo->getPosX() + 3][obstaculo->getPosY()] = " ";
+                        
+                            listaObstaculos->remove();
+
+                            escuadoActivado = false;
+
+                            system("play crashSound.wav >>/dev/null 2>>/dev/null");
+                        }
+                    }
+
+                    //---------- choque normal ------------
+                    if(jugador->getPosX() == obstaculo->getPosX() and jugador->getPosY() <= obstaculo->getPosY() + 2 and jugador->getPosY() >= obstaculo->getPosY()){
+                        background[obstaculo->getPosX()][obstaculo->getPosY() - 2] = " ";
+                        background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 2] = " ";
+                        background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 2] = " ";
+                        background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 2] = " ";
+                        background[obstaculo->getPosX()][obstaculo->getPosY() - 1] = " ";
+                        background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 1] = " ";
+
+                        background[obstaculo->getPosX()][obstaculo->getPosY() - 1] = " ";
+                        background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 1] = " ";
+                        background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 1] = " ";
+                        background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 1] = " ";
+                        background[obstaculo->getPosX()][obstaculo->getPosY()] = " ";
+                        background[obstaculo->getPosX() + 3][obstaculo->getPosY()] = " ";
+                        
+                        lives -= 1;
+                        listaObstaculos->remove();  
+
+                        system("play Crash.wav >>/dev/null 2>>/dev/null");
+
+                        if(lives <= 0){
+                            background[18][4] = "0";
+                            juegoPerdido = true;
+                        }
+
+                    }
+                }
+            }
+
+            //-------- Eliminar al objeto cuando llega al final de la matriz.
+            if(obstaculo->getPosY() == height - 1){
+
+                if(obstaculo->getTipoObstaculo() == "barricada"){
+                    background[obstaculo->getPosX()][obstaculo->getPosY() - 1] = " ";
+                    background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 1] = " ";
+                    background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 1] = " ";
+                    background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 1] = " ";
+                    background[obstaculo->getPosX()][obstaculo->getPosY()] = " ";
+                    background[obstaculo->getPosX() + 1][obstaculo->getPosY()] = " ";
+                    background[obstaculo->getPosX() + 2][obstaculo->getPosY()] = " ";
+                    background[obstaculo->getPosX() + 3][obstaculo->getPosY()] = " ";
+
+                    listaObstaculos->remove();
+
+                }
+                else if(obstaculo->getTipoObstaculo() == "pared"){
+                    background[obstaculo->getPosX()][obstaculo->getPosY() - 1] = " ";
+                    background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 1] = " ";
+                    background[obstaculo->getPosX() + 2][obstaculo->getPosY() - 1] = " ";
+                    background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 1] = " ";
+                    background[obstaculo->getPosX()][obstaculo->getPosY()] = " ";
+                    background[obstaculo->getPosX() + 1][obstaculo->getPosY()] = " ";
+                    background[obstaculo->getPosX() + 2][obstaculo->getPosY()] = " ";
+                    background[obstaculo->getPosX() + 3][obstaculo->getPosY()] = " ";
+
+                    listaObstaculos->remove();
+                }
+            }
+            else if(obstaculo->getPosY() == height - 2){
                 if(obstaculo->getTipoObstaculo() == "rotuloAlto"){
                     background[obstaculo->getPosX()][obstaculo->getPosY() - 2] = " ";
                     background[obstaculo->getPosX() + 1][obstaculo->getPosY() - 2] = " ";
@@ -360,8 +608,10 @@ void imprimirObstaculos(int frame){
                     background[obstaculo->getPosX() + 3][obstaculo->getPosY() - 1] = " ";
                     background[obstaculo->getPosX()][obstaculo->getPosY()] = " ";
                     background[obstaculo->getPosX() + 3][obstaculo->getPosY()] = " ";
+                
+                    listaObstaculos->remove();
                 }
-                listaObstaculos->remove();
+                
             }
         }
     }
@@ -371,6 +621,7 @@ void imprimirObstaculos(int frame){
 //------- imprimir las powerUps -------
 void imprimirPowerUps(int frame){
 
+
     if(frame % speed >= 0){
         for(listaPowerUps->gotoStart(); !listaPowerUps->atEnd(); listaPowerUps->next()){
 
@@ -379,7 +630,7 @@ void imprimirPowerUps(int frame){
 
             //-------- Poner el objeto en su posición de la matriz.
             if(powerUp->getTipoPoder() == "escudo"){
-                background[powerUp->getPosX()][powerUp->getPosY()] = "◠";
+                background[powerUp->getPosX()][powerUp->getPosY()] = "∩";
             }
             else if(powerUp->getTipoPoder() == "iman"){
                 background[powerUp->getPosX()][powerUp->getPosY()] = "Ω";
@@ -391,40 +642,37 @@ void imprimirPowerUps(int frame){
             //-------- Borrar el dibujo del objeto en la posición anterior.
             background[powerUp->getPosX()][powerUp->getPosY() - 2] = " ";
 
+
+            //-------- Interactuar con un escudo --------
+            if(powerUp->getTipoPoder() == "escudo" and powerUp->getPosX() == jugador->getPosX() and powerUp->getPosY() == jugador->getPosY()){
+                escuadoActivado = true;
+
+                system("play powerUpSound.wav >>/dev/null 2>>/dev/null");
+
+            }
+
+            //------- Interactuar con un iman -----------
+            if(powerUp->getTipoPoder() == "iman" and powerUp->getPosX() == jugador->getPosX() and powerUp->getPosY() == jugador->getPosY()){
+                imanActivado = true;
+                turnosIman = 4;
+
+                system("play powerUpSound.wav >>/dev/null 2>>/dev/null");
+            }
+
+
             //-------- Eliminar al objeto cuando llega al final de la matriz.
-            if(powerUp->getPosY() == 14){
+            if(powerUp->getPosY() == height - 1){
                 background[powerUp->getPosX()][powerUp->getPosY() - 1] = " ";
                 background[powerUp->getPosX()][powerUp->getPosY()] = " ";
                 listaPowerUps->remove();
             }
         }
+
     }
 
 }
 
-//------- Limpiar la pantalla -------
-void limpiarPantalla(){
-    system(clearcommand);
-}
-
-
-//------- Actualizar el loop --------
-void mainloop(int frame){
-
-    limpiarPantalla();           // limpiar pantalla
-
-    imprimirMatriz();            // imprimir los elementos de la interfaz de la matriz
-    imprimirJugador();           // imprimir al auto del jugador
-
-    generarObjeto(frame);        // generar objetos
-
-    imprimirMonedas(frame);      // imprimir monedas
-    imprimirObstaculos(frame);   // imprimir obstaculos
-    imprimirPowerUps(frame);     // imprimir power ups
-}
-
-
-
+//------- funcion para controlar el frameRate ---
 /// Waiting Function
 void sleepcp(int milliseconds) // Cross-platform sleep function
 {
@@ -436,91 +684,171 @@ void sleepcp(int milliseconds) // Cross-platform sleep function
 }
 
 
-// Las acciones de las teclas.
-void escucharTeclado(const char k){
-    if(k == 'd'|| k == 'D'){
-        if(jugador->getPosX() != 11){
-        //---------- limpiar posición anterior
-            background[jugador->getPosX()][jugador->getPosY()]        = " ";
-            background[jugador->getPosX() + 3][jugador->getPosY()]    = " ";
-            background[jugador->getPosX()][jugador->getPosY() + 3]    = " ";
-            background[jugador->getPosX() +3][jugador->getPosY() + 3] = " ";
 
-            background[jugador->getPosX() + 1][jugador->getPosY() + 1] = " ";
-            background[jugador->getPosX() + 2][jugador->getPosY() + 1] = " ";
-            background[jugador->getPosX() + 1][jugador->getPosY() + 2] = " ";
-            background[jugador->getPosX() + 2][jugador->getPosY() + 2] = " ";
+int kbhit2(void)
+{
+    int ch = getch();
 
-            background[jugador->getPosX()][jugador->getPosY() + 4]    = " ";
-            background[jugador->getPosX() +3][jugador->getPosY() + 4] = " ";
-            background[jugador->getPosX()][jugador->getPosY() + 1]     = " ";
-            background[jugador->getPosX() + 3][jugador->getPosY() + 1] = " ";
-            jugador->setPosX(jugador->getPosX() + 5);
-            jugador->setEstado("normal");
-        }
-
+    if (ch != ERR) {
+        ungetch(ch);
+        return 1;
+    } else {
+        return 0;
     }
-    else if(k == 'a' || k == 'A'){
-                //---------- limpiar posición anterior
-        if(jugador->getPosX() != 1){
-            background[jugador->getPosX()][jugador->getPosY()]        = " ";
-            background[jugador->getPosX() + 3][jugador->getPosY()]    = " ";
-            background[jugador->getPosX()][jugador->getPosY() + 3]    = " ";
-            background[jugador->getPosX() +3][jugador->getPosY() + 3] = " ";
-
-            background[jugador->getPosX() + 1][jugador->getPosY() + 1] = " ";
-            background[jugador->getPosX() + 2][jugador->getPosY() + 1] = " ";
-            background[jugador->getPosX() + 1][jugador->getPosY() + 2] = " ";
-            background[jugador->getPosX() + 2][jugador->getPosY() + 2] = " ";
-
-            background[jugador->getPosX()][jugador->getPosY() + 4]    = " ";
-            background[jugador->getPosX() +3][jugador->getPosY() + 4] = " ";
-            background[jugador->getPosX()][jugador->getPosY() + 1]     = " ";
-            background[jugador->getPosX() + 3][jugador->getPosY() + 1] = " ";
-            jugador->setPosX(jugador->getPosX() - 5);
-            jugador->setEstado("normal");
-        }
-    }
-    else if(k == 'w' || k == 'W'){
-        jugador->setEstado("salto");
-
-    }
-    else if(k == 's' || k == 'S'){
-        jugador->setEstado("agacharse");
-    }
-    else if(k == 'q' || k == 'z' || k == 'c'){
-        cout << "[+] Exit Safely [+]"<<endl;
-        exit(0);
-    }
-
 }
 
+int main(){
 
-/// Loop
-void loop(){
+    WINDOW * pantallaJuego = newwin(height, width, 0, 0);
+
     int frame = 0;
 
-    while(true){
+    // inicializa la pantalla
+    // sets up memory and clears the screen
+
+    setlocale(LC_ALL, "en_US.utf8");
+    inicializarTerreno();
+
+    initscr();
+    start_color();
+
+    //---------- Colores ----------
+    init_pair(1, COLOR_RED, COLOR_BLACK);    // Rojo
+    init_pair(2, COLOR_YELLOW, COLOR_BLACK); // Amarillo
+    init_pair(3, COLOR_GREEN, COLOR_BLACK);  // Verde
+    init_pair(4, COLOR_BLUE, COLOR_BLACK);   // Azul
+    init_pair(5, COLOR_MAGENTA, COLOR_BLACK);// Magenta
+    init_pair(6, COLOR_CYAN, COLOR_BLACK);   // Cyan
+    init_pair(7, COLOR_WHITE, COLOR_BLACK);  // Blanco
+
+    init_pair(8, COLOR_RED, COLOR_WHITE);    // Rojo
+    init_pair(9, COLOR_YELLOW, COLOR_WHITE); // Amarillo
+    init_pair(10, COLOR_GREEN, COLOR_WHITE);  // Verde
+    init_pair(11, COLOR_BLUE, COLOR_WHITE);   // Azul
+    init_pair(12, COLOR_MAGENTA, COLOR_WHITE);// Magenta
+    init_pair(13, COLOR_CYAN, COLOR_WHITE);   // Cyan
+    init_pair(14, COLOR_BLACK, COLOR_WHITE);   // Cyan
+
+
+    //-----------------------------
+
+
+
+    cbreak();
+    noecho();
+    nodelay(stdscr, TRUE);
+
+    keypad(stdscr, TRUE);
+    scrollok(stdscr, TRUE);
+
+    int c;
+
+    //------------------------
+    //--------------------
+    while(seguirJugando){ 
+
         sleepcp(lap);
 
-        if(_kbhit())   /// If keyboard hit
-        {
-            cin >> k; /// Character
-            escucharTeclado(k);
+
+        if (kbhit2()) {
+            c = getch();
+
+            if(c == KEY_UP){
+                jugador->setEstado("salto");
+            }
+            else if(c == KEY_DOWN){
+                jugador->setEstado("agacharse");
+            }
+            else if(c == KEY_LEFT){
+                if(jugador->getPosX() != 1){
+                    background[jugador->getPosX()][jugador->getPosY()]        = " ";
+                    background[jugador->getPosX() + 3][jugador->getPosY()]    = " ";
+                    background[jugador->getPosX()][jugador->getPosY() + 3]    = " ";
+                    background[jugador->getPosX() +3][jugador->getPosY() + 3] = " ";
+
+                    background[jugador->getPosX() + 1][jugador->getPosY() + 1] = " ";
+                    background[jugador->getPosX() + 2][jugador->getPosY() + 1] = " ";
+                    background[jugador->getPosX() + 1][jugador->getPosY() + 2] = " ";
+                    background[jugador->getPosX() + 2][jugador->getPosY() + 2] = " ";
+
+                    background[jugador->getPosX()][jugador->getPosY() + 4]    = " ";
+                    background[jugador->getPosX() +3][jugador->getPosY() + 4] = " ";
+                    background[jugador->getPosX()][jugador->getPosY() + 1]     = " ";
+                    background[jugador->getPosX() + 3][jugador->getPosY() + 1] = " ";
+                   
+                    jugador->setPosX(jugador->getPosX() - 5);
+                    jugador->setEstado("normal");
+                }
+            }
+            else if(c == KEY_RIGHT){
+                if(jugador->getPosX() != 11){
+                //---------- limpiar posición anterior
+                    background[jugador->getPosX()][jugador->getPosY()]        = " ";
+                    background[jugador->getPosX() + 3][jugador->getPosY()]    = " ";
+                    background[jugador->getPosX()][jugador->getPosY() + 3]    = " ";
+                    background[jugador->getPosX() +3][jugador->getPosY() + 3] = " ";
+
+                    background[jugador->getPosX() + 1][jugador->getPosY() + 1] = " ";
+                    background[jugador->getPosX() + 2][jugador->getPosY() + 1] = " ";
+                    background[jugador->getPosX() + 1][jugador->getPosY() + 2] = " ";
+                    background[jugador->getPosX() + 2][jugador->getPosY() + 2] = " ";
+
+                    background[jugador->getPosX()][jugador->getPosY() + 4]    = " ";
+                    background[jugador->getPosX() +3][jugador->getPosY() + 4] = " ";
+                    background[jugador->getPosX()][jugador->getPosY() + 1]     = " ";
+                    background[jugador->getPosX() + 3][jugador->getPosY() + 1] = " ";
+                    
+                    jugador->setPosX(jugador->getPosX() + 5);
+                    jugador->setEstado("normal");
+
+                }
+            }
+            //------------- Pausar ------------------
+            else if(c == 10){
+                juegoPausado = !juegoPausado; 
+            }
+            //------------- Salir del juEgo ---------
+            else if(c == KEY_BACKSPACE){
+                seguirJugando = false;
+            }   
+
+            refresh();
+        } else {
+            refresh();
+            //sleep(1);
         }
 
-        mainloop(frame);                 /// RUn Main Loop FUnction
 
-        cout << "< Frame : " << frame << "  | Score  : " << score << " > "<< endl; /// Print Status
-        frame++;
+        if(juegoPerdido == false){
+            if(juegoPausado == false){
+                imprimirJugador();
+                imprimirMatriz(pantallaJuego);
+
+                generarObjeto(frame);
+
+                imprimirMonedas(frame);
+                imprimirObstaculos(frame);
+                imprimirPowerUps(frame);
+
+
+                frame += 1;
+            }
+            else{
+                mvprintw(10, 10, "JUEGO EN PAUSA");
+            }
+        }
+        else{
+            mvprintw(10, 10, "PERDEDOR");
+        }
+
     }
+    //--------------------
+//------------------------
 
-}
+    refresh();
+    // termina la pantalla
+    endwin();
 
 
-/// Main Trigger Function
-main(){
-
-    inicializarTerreno(); /// Dibujar los carriles y la interfaz de la derecha.
-    loop();                 /// run Update Loop
+    return 0;
 }

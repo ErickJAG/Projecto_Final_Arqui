@@ -12,7 +12,7 @@ class Jugador
         int puntuacion = 0;
         int carril = 0;
         int vidas = 0;
-        string estado = " ";
+        string estado = "normal";
 
         int posX = 6;
         int posY = 11;
@@ -23,10 +23,10 @@ class Jugador
             puntuacion = 0;
             carril = 0;
             vidas = 0;
-            estado = " ";
+            estado = "normal";
 
             posX = 6;
-            posY = 11;
+            posY = 15;
         }
 
         virtual ~Jugador() {}
